@@ -3,6 +3,7 @@ export interface Task {
   name: string;
   color?: string;
   createdAt: string;
+  archivedAt?: string;
 }
 
 export interface TimeEntry {

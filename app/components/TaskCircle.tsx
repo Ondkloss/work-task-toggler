@@ -9,6 +9,7 @@ interface TaskCircleProps {
   totalTime: number;
   formattedTime: string;
   onToggle: () => void;
+  onArchive: () => void;
 }
 
 export default function TaskCircle({ 
@@ -16,7 +17,8 @@ export default function TaskCircle({
   isActive, 
   totalTime, 
   formattedTime, 
-  onToggle 
+  onToggle,
+  onArchive
 }: TaskCircleProps) {
   return (
     <div className="flex flex-col items-center space-y-2">
@@ -24,6 +26,7 @@ export default function TaskCircle({
         taskName={task.name}
         formattedTime={formattedTime}
         isActive={isActive}
+        onArchive={onArchive}
       >
         <button
           onClick={onToggle}

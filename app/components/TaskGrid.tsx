@@ -9,6 +9,7 @@ interface TaskGridProps {
   activeTaskId?: string;
   onToggleTask: (taskId: string) => void;
   onAddTask: (name: string) => void;
+  onArchiveTask: (taskId: string) => void;
   getTaskTotalTime: (taskId: string) => number;
   formatTime: (milliseconds: number) => string;
 }
@@ -18,6 +19,7 @@ export default function TaskGrid({
   activeTaskId,
   onToggleTask,
   onAddTask,
+  onArchiveTask,
   getTaskTotalTime,
   formatTime,
 }: TaskGridProps) {
@@ -37,6 +39,7 @@ export default function TaskGrid({
               totalTime={totalTime}
               formattedTime={formattedTime}
               onToggle={() => onToggleTask(task.id)}
+              onArchive={() => onArchiveTask(task.id)}
             />
           );
         })}

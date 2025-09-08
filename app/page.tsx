@@ -17,6 +17,7 @@ export default function Home() {
     tasks,
     activeTaskId,
     addTask,
+    archiveTask,
     toggleTask,
     getTaskTotalTime,
     formatTime,
@@ -93,6 +94,7 @@ export default function Home() {
               activeTaskId={isViewingToday ? activeTaskId : undefined}
               onToggleTask={isViewingToday ? toggleTask : () => {}}
               onAddTask={addTask}
+              onArchiveTask={archiveTask}
               getTaskTotalTime={getTaskTotalTime}
               formatTime={formatTime}
             />

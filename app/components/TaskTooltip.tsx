@@ -6,13 +6,15 @@ interface TaskTooltipProps {
   taskName: string;
   formattedTime: string;
   isActive: boolean;
+  onArchive: () => void;
   children: React.ReactNode;
 }
 
 export default function TaskTooltip({ 
   taskName, 
   formattedTime, 
-  isActive, 
+  isActive,
+  onArchive,
   children 
 }: TaskTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
@@ -36,11 +38,20 @@ export default function TaskTooltip({
                 {isActive ? 'Currently active' : 'Inactive'} • {formattedTime}
               </div>
               
-              {/* Future buttons placeholder */}
+              {/* Archive button */}
               <div className="pt-2 border-t border-gray-600">
-                <div className="text-xs text-gray-400 italic">
-                  Future actions will appear here
-                </div>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onArchive();
+                    setIsVisible(false);
+                  }}
+                  className="flex items-center space-x-2 text-xs text-red-300 hover:text-red-200 transition-colors"
+                  title="Archive this task"
+                >
+                  <span className="text-sm">🗄️</span>
+                  <span>Archive</span>
+                </button>
               </div>
             </div>
             
