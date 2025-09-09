@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useCallback } from 'react';
 
 interface TaskTooltipProps {
   taskName: string;
@@ -18,18 +18,48 @@ export default function TaskTooltip({
   children 
 }: TaskTooltipProps) {
   const [isVisible, setIsVisible] = useState(false);
+  const timeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  const showTooltip = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+    setIsVisible(true);
+  }, []);
+
+  const hideTooltip = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+    }
+    timeoutRef.current = setTimeout(() => {
+      setIsVisible(false);
+      timeoutRef.current = null;
+    }, 300); // 300ms delay before hiding
+  }, []);
+
+  const cancelHide = useCallback(() => {
+    if (timeoutRef.current) {
+      clearTimeout(timeoutRef.current);
+      timeoutRef.current = null;
+    }
+  }, []);
 
   return (
     <div className="relative">
       <div
-        onMouseEnter={() => setIsVisible(true)}
-        onMouseLeave={() => setIsVisible(false)}
+        onMouseEnter={showTooltip}
+        onMouseLeave={hideTooltip}
       >
         {children}
       </div>
 
       {isVisible && (
-        <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50">
+        <div 
+          className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 z-50"
+          onMouseEnter={cancelHide}
+          onMouseLeave={hideTooltip}
+        >
           <div className="bg-gray-900 text-white px-4 py-3 rounded-lg shadow-lg border border-gray-700 min-w-max">
             {/* Task details */}
             <div className="space-y-2">
