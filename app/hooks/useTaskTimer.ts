@@ -14,6 +14,64 @@ function generateId(): string {
   return Math.random().toString(36).substr(2, 9);
 }
 
+function getDateString(timestamp: number): string {
+  return new Date(timestamp).toISOString().split('T')[0];
+}
+
+function splitTimeEntryAcrossMidnight(taskId: string, startTime: number, endTime: number): TimeEntry[] {
+  const startDate = getDateString(startTime);
+  const endDate = getDateString(endTime);
+  
+  // If both timestamps are on the same date, no splitting needed
+  if (startDate === endDate) {
+    return [{
+      taskId,
+      startTime,
+      endTime,
+      duration: endTime - startTime,
+      date: startDate,
+    }];
+  }
+  
+  const entries: TimeEntry[] = [];
+  let currentTime = startTime;
+  let currentDate = startDate;
+  
+  while (getDateString(currentTime) !== endDate) {
+    // Calculate midnight of the next day
+    const nextDay = new Date(currentDate);
+    nextDay.setUTCDate(nextDay.getUTCDate() + 1);
+    nextDay.setUTCHours(0, 0, 0, 0);
+    const midnight = nextDay.getTime();
+    
+    // Create entry for current day (from currentTime to midnight)
+    entries.push({
+      taskId,
+      startTime: currentTime,
+      endTime: midnight,
+      duration: midnight - currentTime,
+      date: currentDate,
+    });
+    
+    // Move to next day
+    currentTime = midnight;
+    currentDate = getDateString(currentTime);
+  }
+  
+  // Create final entry for the end date
+  if (currentTime < endTime) {
+    entries.push({
+      taskId,
+      startTime: currentTime,
+      endTime,
+      duration: endTime - currentTime,
+      date: endDate,
+    });
+  }
+  
+  return entries;
+}
+
 export function useTaskTimer(selectedDate?: string) {
   const [appState, setAppState] = useLocalStorage<AppState>(STORAGE_KEY, {
     tasks: [], // Global tasks
@@ -60,6 +118,52 @@ export function useTaskTimer(selectedDate?: string) {
     }
   }, [currentDate, appState?.currentDate, setAppState]);
 
+  // Handle midnight crossing for active tasks
+  useEffect(() => {
+    // Only check for midnight crossing if we're viewing today and there's an active task
+    if (viewDate === currentDate && todayData.activeTaskId && todayData.activeStartTime) {
+      const activeStartDate = getDateString(todayData.activeStartTime);
+      
+      // If the active task started on a different date, it has crossed midnight
+      if (activeStartDate !== currentDate) {
+        setAppState(prev => {
+          const newDailyData = { ...prev?.dailyData || {} };
+          
+          // Split the active session up to midnight of the current day
+          const midnightOfCurrentDay = new Date(currentDate + 'T00:00:00.000Z').getTime();
+          
+          const splitEntries = splitTimeEntryAcrossMidnight(
+            todayData.activeTaskId!,
+            todayData.activeStartTime!,
+            midnightOfCurrentDay
+          );
+          
+          // Add each split entry to the appropriate date's data
+          splitEntries.forEach(entry => {
+            if (!newDailyData[entry.date]) {
+              newDailyData[entry.date] = { date: entry.date, timeEntries: [] };
+            }
+            newDailyData[entry.date].timeEntries = [
+              ...newDailyData[entry.date].timeEntries,
+              entry
+            ];
+          });
+          
+          // Update today's data to start the task from midnight
+          const currentDayData = { ...newDailyData[currentDate] || { date: currentDate, timeEntries: [] } };
+          currentDayData.activeTaskId = todayData.activeTaskId;
+          currentDayData.activeStartTime = midnightOfCurrentDay;
+          newDailyData[currentDate] = currentDayData;
+          
+          return {
+            ...prev,
+            dailyData: newDailyData,
+          };
+        });
+      }
+    }
+  }, [currentDate, viewDate, todayData.activeTaskId, todayData.activeStartTime, setAppState]);
+
   const addTask = useCallback((name: string) => {
     const newTask: Task = {
       id: generateId(),
@@ -89,15 +193,25 @@ export function useTaskTimer(selectedDate?: string) {
       
       if (dayData.activeTaskId === taskId && dayData.activeStartTime) {
         const now = Date.now();
-        const activeEntry: TimeEntry = {
-          taskId: dayData.activeTaskId,
-          startTime: dayData.activeStartTime,
-          endTime: now,
-          duration: now - dayData.activeStartTime,
-          date: viewDate,
-        };
+        
+        // Split the time entry across midnight if necessary
+        const splitEntries = splitTimeEntryAcrossMidnight(
+          dayData.activeTaskId,
+          dayData.activeStartTime,
+          now
+        );
+        
+        // Add each split entry to the appropriate date's data
+        splitEntries.forEach(entry => {
+          if (!newDailyData[entry.date]) {
+            newDailyData[entry.date] = { date: entry.date, timeEntries: [] };
+          }
+          newDailyData[entry.date].timeEntries = [
+            ...newDailyData[entry.date].timeEntries,
+            entry
+          ];
+        });
 
-        dayData.timeEntries = [...dayData.timeEntries, activeEntry];
         dayData.activeTaskId = undefined;
         dayData.activeStartTime = undefined;
         newDailyData[viewDate] = dayData;
@@ -120,15 +234,23 @@ export function useTaskTimer(selectedDate?: string) {
 
       // If there's an active task, stop it
       if (dayData.activeTaskId && dayData.activeStartTime) {
-        const activeEntry: TimeEntry = {
-          taskId: dayData.activeTaskId,
-          startTime: dayData.activeStartTime,
-          endTime: now,
-          duration: now - dayData.activeStartTime,
-          date: viewDate,
-        };
-
-        dayData.timeEntries = [...dayData.timeEntries, activeEntry];
+        // Split the time entry across midnight if necessary
+        const splitEntries = splitTimeEntryAcrossMidnight(
+          dayData.activeTaskId,
+          dayData.activeStartTime,
+          now
+        );
+        
+        // Add each split entry to the appropriate date's data
+        splitEntries.forEach(entry => {
+          if (!newDailyData[entry.date]) {
+            newDailyData[entry.date] = { date: entry.date, timeEntries: [] };
+          }
+          newDailyData[entry.date].timeEntries = [
+            ...newDailyData[entry.date].timeEntries,
+            entry
+          ];
+        });
       }
 
       // If clicking on the currently active task, just stop it
