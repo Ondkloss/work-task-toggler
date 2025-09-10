@@ -30,8 +30,16 @@ export function useTaskTimer(selectedDate?: string) {
     timeEntries: [],
   };
 
-  // Use global tasks from appState
-  const tasks = appState?.tasks || [];
+  // Use global tasks from appState, filtered by creation and archive dates
+  const tasks = (appState?.tasks || []).filter(task => {
+    const taskCreatedDate = new Date(task.createdAt).toISOString().split('T')[0];
+    const taskArchivedDate = task.archivedAt ? new Date(task.archivedAt).toISOString().split('T')[0] : null;
+    
+    // Task should be visible if:
+    // 1. It was created on or before the viewing date
+    // 2. It's not archived OR it was archived after the viewing date
+    return taskCreatedDate <= viewDate && (!taskArchivedDate || taskArchivedDate > viewDate);
+  });
 
   // Update current time every second for live timer display
   useEffect(() => {
@@ -66,6 +74,42 @@ export function useTaskTimer(selectedDate?: string) {
       };
     });
   }, [setAppState]);
+
+  const archiveTask = useCallback((taskId: string) => {
+    setAppState(prev => {
+      const updatedTasks = (prev?.tasks || []).map(task => 
+        task.id === taskId 
+          ? { ...task, archivedAt: new Date().toISOString() }
+          : task
+      );
+
+      // If the archived task is currently active, stop it
+      const newDailyData = { ...prev?.dailyData || {} };
+      const dayData = { ...newDailyData[viewDate] || { date: viewDate, timeEntries: [] } };
+      
+      if (dayData.activeTaskId === taskId && dayData.activeStartTime) {
+        const now = Date.now();
+        const activeEntry: TimeEntry = {
+          taskId: dayData.activeTaskId,
+          startTime: dayData.activeStartTime,
+          endTime: now,
+          duration: now - dayData.activeStartTime,
+          date: viewDate,
+        };
+
+        dayData.timeEntries = [...dayData.timeEntries, activeEntry];
+        dayData.activeTaskId = undefined;
+        dayData.activeStartTime = undefined;
+        newDailyData[viewDate] = dayData;
+      }
+
+      return {
+        ...prev,
+        tasks: updatedTasks,
+        dailyData: newDailyData,
+      };
+    });
+  }, [setAppState, viewDate]);
 
   const toggleTask = useCallback((taskId: string) => {
     setAppState(prev => {
@@ -144,9 +188,10 @@ export function useTaskTimer(selectedDate?: string) {
   }, [todayData.timeEntries]);
 
   return {
-    tasks: tasks, // Use global tasks
+    tasks: tasks, // Use filtered tasks
     activeTaskId: todayData.activeTaskId,
     addTask,
+    archiveTask,
     toggleTask,
     getTaskTotalTime,
     formatTime,
