@@ -1,4 +1,12 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Work task toggler
+
+This is a simple client side web app that allows you to create task that you can easily toggle on/off to track time usage on a set of tasks.
+
+Give it a try here: https://ondkloss.github.io/work-task-toggler/
+
+## Disclosure
+
+This repo is very much made possible by Copilot, which did the bulk of the code. Thanks for the assist Copilot!
 
 ## Getting Started
 
