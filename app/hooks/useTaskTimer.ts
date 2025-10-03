@@ -214,7 +214,14 @@ export function useTaskTimer(selectedDate?: string) {
 
         dayData.activeTaskId = undefined;
         dayData.activeStartTime = undefined;
-        newDailyData[viewDate] = dayData;
+        
+        // Update the day data for the current view date, preserving any time entries that may have been added
+        if (newDailyData[viewDate]) {
+          newDailyData[viewDate].activeTaskId = dayData.activeTaskId;
+          newDailyData[viewDate].activeStartTime = dayData.activeStartTime;
+        } else {
+          newDailyData[viewDate] = dayData;
+        }
       }
 
       return {
@@ -263,7 +270,13 @@ export function useTaskTimer(selectedDate?: string) {
         dayData.activeStartTime = now;
       }
 
-      newDailyData[viewDate] = dayData;
+      // Update the day data for the current view date, preserving any time entries that may have been added
+      if (newDailyData[viewDate]) {
+        newDailyData[viewDate].activeTaskId = dayData.activeTaskId;
+        newDailyData[viewDate].activeStartTime = dayData.activeStartTime;
+      } else {
+        newDailyData[viewDate] = dayData;
+      }
 
       return {
         ...prev,
